@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useRef } from 'react';
 import { OPDDoctor, Service, SiteConfig, Appointment, Testimonial, Department, HealthPackage, ClinicDocument } from '../types';
 import { INITIAL_OPD_SCHEDULE, INITIAL_SERVICES, SITE_CONFIG, INITIAL_TESTIMONIALS, INITIAL_DEPARTMENTS, INITIAL_HEALTH_PACKAGES } from '../constants';
 import { supabase } from '../lib/supabase';
@@ -52,6 +52,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [isInitialLoadDone, setIsInitialLoadDone] = useState(false);
   const [siteConfigDbId, setSiteConfigDbId] = useState<string | null>(null);
 
+  // Database State Snapshots for Diffing
+  const dbDoctorsRef = useRef<OPDDoctor[]>([]);
+  const dbPackagesRef = useRef<HealthPackage[]>([]);
+  const dbAppointmentsRef = useRef<Appointment[]>([]);
+  const dbTestimonialsRef = useRef<Testimonial[]>([]);
+  const dbDepartmentsRef = useRef<Department[]>([]);
+  const dbDocumentsRef = useRef<ClinicDocument[]>([]);
+
   // Initial Load & Sync from Supabase
   const loadData = async () => {
     if (!supabase) {
@@ -90,7 +98,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setSiteConfigDbId(site.id);
       }
       if (docs) {
-        setOpdDoctors(docs.map(d => ({
+        const mappedDocs = docs.map(d => ({
           id: d.id,
           name: d.name,
           specialty: d.specialty,
@@ -106,10 +114,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           expiryDate: d.expiry_date,
           fee: d.fee,
           consultationTime: d.consultation_time
-        })));
+        }));
+        setOpdDoctors(mappedDocs);
+        dbDoctorsRef.current = mappedDocs;
       }
       if (pkgs) {
-        setHealthPackages(pkgs.map(p => ({
+        const mappedPkgs = pkgs.map(p => ({
           id: p.id,
           name: p.name,
           actualPrice: p.actual_price,
@@ -118,10 +128,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
           tests: p.tests,
           discountBadge: p.discount_badge,
           description: p.description
-        })));
+        }));
+        setHealthPackages(mappedPkgs);
+        dbPackagesRef.current = mappedPkgs;
       }
       if (apps) {
-        setAppointments(apps.map(a => ({
+        const mappedApps = apps.map(a => ({
           id: a.id,
           patientName: a.patient_name,
           patientPhone: a.patient_phone,
@@ -135,23 +147,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
           isHomeCollection: a.is_home_collection,
           claimOffer: a.claim_offer,
           finalPrice: Number(a.final_price) || 0
-        })));
+        }));
+        setAppointments(mappedApps);
+        dbAppointmentsRef.current = mappedApps;
       }
-      if (tests) setTestimonials(tests);
+      if (tests) {
+        setTestimonials(tests);
+        dbTestimonialsRef.current = tests;
+      }
       if (depts) {
-        setDepartments(depts.map(d => ({
+        const mappedDepts = depts.map(d => ({
           id: d.id,
           name: d.name,
           headOfDepartment: d.head_of_department,
           description: d.description
-        })));
+        }));
+        setDepartments(mappedDepts);
+        dbDepartmentsRef.current = mappedDepts;
       }
-      if (clinicFiles) setDocuments(clinicFiles.map(f => ({
-        id: f.id,
-        name: f.name,
-        fileData: f.file_url,
-        uploadDate: f.upload_date
-      })));
+      if (clinicFiles) {
+        const mappedFiles = clinicFiles.map(f => ({
+          id: f.id,
+          name: f.name,
+          fileData: f.file_url,
+          uploadDate: f.upload_date
+        }));
+        setDocuments(mappedFiles);
+        dbDocumentsRef.current = mappedFiles;
+      }
     } catch (e) {
       console.error("Supabase load exception:", e);
     } finally {
@@ -174,7 +197,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
             schema: 'public'
           },
           () => {
-            loadData();
+            if (!window.location.pathname.toLowerCase().includes('/admin')) {
+              loadData();
+            }
           }
         )
         .subscribe();
@@ -229,9 +254,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const oldDoctors = opdDoctors;
     setOpdDoctors(doctors);
     if (syncToDb && supabase && isInitialLoadDone) {
-      // Diff to only upsert new or modified doctors
+      // Diff to only upsert new or modified doctors compared to DB representation
       const changedOrNew = doctors.filter(newDoc => {
-        const oldDoc = oldDoctors.find(o => o.id === newDoc.id);
+        const oldDoc = dbDoctorsRef.current.find(o => o.id === newDoc.id);
         if (!oldDoc) return true;
         return JSON.stringify(oldDoc) !== JSON.stringify(newDoc);
       });
@@ -267,6 +292,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setOpdDoctors(oldDoctors);
           throw new Error(error.message || "Failed to sync doctors roster with database.");
         }
+        dbDoctorsRef.current = doctors;
       }
     }
   };
@@ -275,9 +301,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const oldPkgs = healthPackages;
     setHealthPackages(pkgs);
     if (syncToDb && supabase && isInitialLoadDone) {
-      // Diff to only upsert new or modified packages
+      // Diff to only upsert new or modified packages compared to DB representation
       const changedOrNew = pkgs.filter(newPkg => {
-        const oldPkg = oldPkgs.find(o => o.id === newPkg.id);
+        const oldPkg = dbPackagesRef.current.find(o => o.id === newPkg.id);
         if (!oldPkg) return true;
         return JSON.stringify(oldPkg) !== JSON.stringify(newPkg);
       });
@@ -306,6 +332,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setHealthPackages(oldPkgs);
           throw new Error(error.message || "Failed to sync health packages with database.");
         }
+        dbPackagesRef.current = pkgs;
       }
     }
   };
@@ -314,9 +341,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const oldTests = testimonials;
     setTestimonials(tests);
     if (syncToDb && supabase && isInitialLoadDone) {
-      // Diff to only upsert new or modified testimonials
+      // Diff to only upsert new or modified testimonials compared to DB representation
       const changedOrNew = tests.filter(newTest => {
-        const oldTest = oldTests.find(o => o.id === newTest.id);
+        const oldTest = dbTestimonialsRef.current.find(o => o.id === newTest.id);
         if (!oldTest) return true;
         return JSON.stringify(oldTest) !== JSON.stringify(newTest);
       });
@@ -342,6 +369,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setTestimonials(oldTests);
           throw new Error(error.message || "Failed to sync testimonials with database.");
         }
+        dbTestimonialsRef.current = tests;
       }
     }
   };
@@ -350,9 +378,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const oldDepts = departments;
     setDepartments(depts);
     if (syncToDb && supabase && isInitialLoadDone) {
-      // Diff to only upsert new or modified departments
+      // Diff to only upsert new or modified departments compared to DB representation
       const changedOrNew = depts.filter(newDept => {
-        const oldDept = oldDepts.find(o => o.id === newDept.id);
+        const oldDept = dbDepartmentsRef.current.find(o => o.id === newDept.id);
         if (!oldDept) return true;
         return JSON.stringify(oldDept) !== JSON.stringify(newDept);
       });
@@ -377,6 +405,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setDepartments(oldDepts);
           throw new Error(error.message || "Failed to sync departments with database.");
         }
+        dbDepartmentsRef.current = depts;
       }
     }
   };
@@ -385,9 +414,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const oldDocs = documents;
     setDocuments(docs);
     if (syncToDb && supabase && isInitialLoadDone) {
-      // Diff to only upsert new or modified documents
+      // Diff to only upsert new or modified documents compared to DB representation
       const changedOrNew = docs.filter(newDoc => {
-        const oldDoc = oldDocs.find(o => o.id === newDoc.id);
+        const oldDoc = dbDocumentsRef.current.find(o => o.id === newDoc.id);
         if (!oldDoc) return true;
         return JSON.stringify(oldDoc) !== JSON.stringify(newDoc);
       });
@@ -412,6 +441,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           setDocuments(oldDocs);
           throw new Error(error.message || "Failed to sync clinical documents with database.");
         }
+        dbDocumentsRef.current = docs;
       }
     }
   };
@@ -420,11 +450,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const oldApps = appointments;
     setAppointments(newApps);
     if (syncToDb && supabase && isInitialLoadDone && newApps.length > 0) {
-      // Diff to only upsert new or modified appointments.
-      // This is crucial for anonymous patient bookings to avoid RLS violation errors 
-      // when attempting to upsert existing appointments of other patients!
+      // Diff to only upsert new or modified appointments compared to DB representation
       const changedOrNew = newApps.filter(newApp => {
-        const oldApp = oldApps.find(o => o.id === newApp.id);
+        const oldApp = dbAppointmentsRef.current.find(o => o.id === newApp.id);
         if (!oldApp) return true;
         return JSON.stringify(oldApp) !== JSON.stringify(newApp);
       });
@@ -452,12 +480,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }
           return payload;
         });
-        const { error } = await supabase.from('appointments').upsert(dbApps);
+        const { error } = user 
+          ? await supabase.from('appointments').upsert(dbApps)
+          : await supabase.from('appointments').insert(dbApps);
         if (error) {
           console.error("Appointments sync error:", error);
           setAppointments(oldApps);
           throw new Error(error.message || "Failed to save appointment to database.");
         }
+        dbAppointmentsRef.current = newApps;
       }
     }
   };

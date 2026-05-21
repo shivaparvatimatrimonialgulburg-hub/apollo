@@ -208,7 +208,7 @@ export default function Admin() {
       fee: 600,
       consultationTime: '10:00 AM - 02:00 PM'
     };
-    setOpdDoctors([newDoc, ...opdDoctors]);
+    setOpdDoctors([newDoc, ...opdDoctors], false);
   };
 
   const updateDoctor = (id: string, updates: Partial<OPDDoctor>) => {
@@ -272,7 +272,7 @@ export default function Admin() {
       rating: 5,
       review: 'Write your review here...',
     };
-    setTestimonials([newTest, ...testimonials]);
+    setTestimonials([newTest, ...testimonials], false);
   };
 
   const updateTestimonial = (id: string, updates: Partial<Testimonial>) => {
@@ -293,7 +293,7 @@ export default function Admin() {
       headOfDepartment: 'HOD Name',
       description: 'Department description...'
     };
-    setDepartments([newDept, ...departments]);
+    setDepartments([newDept, ...departments], false);
   };
 
   const updateDepartment = (id: string, updates: Partial<Department>) => {
@@ -316,7 +316,7 @@ export default function Admin() {
       totalTests: 0,
       tests: [],
     };
-    setHealthPackages([newPkg, ...healthPackages]);
+    setHealthPackages([newPkg, ...healthPackages], false);
   };
 
   const updateHealthPackage = (id: string, updates: Partial<HealthPackage>) => {
@@ -770,15 +770,15 @@ export default function Admin() {
                             <label className="text-[10px] uppercase font-black text-slate-400">Consultation Fee (₹)</label>
                             <input 
                               type="number"
-                              value={doc.fee || 600} 
-                              onChange={(e) => updateDoctor(doc.id, { fee: Number(e.target.value) })}
+                              value={doc.fee ?? ''} 
+                              onChange={(e) => updateDoctor(doc.id, { fee: e.target.value === '' ? undefined : Number(e.target.value) })}
                               className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm"
                             />
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] uppercase font-black text-slate-400">Consultation Timing</label>
                             <input 
-                              value={doc.consultationTime || '10:00 AM - 02:00 PM'} 
+                              value={doc.consultationTime ?? ''} 
                               onChange={(e) => updateDoctor(doc.id, { consultationTime: e.target.value })}
                               placeholder="e.g. 10:00 AM - 02:00 PM"
                               className="w-full p-2 bg-white border border-slate-200 rounded-lg text-sm"
@@ -1722,8 +1722,8 @@ export default function Admin() {
                       <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Total Pricing Amount</label>
                       <input 
                         type="number"
-                        value={activeAppointmentForm.finalPrice || 0}
-                        onChange={(e) => setActiveAppointmentForm({ ...activeAppointmentForm, finalPrice: Number(e.target.value) })}
+                        value={activeAppointmentForm.finalPrice ?? ''}
+                        onChange={(e) => setActiveAppointmentForm({ ...activeAppointmentForm, finalPrice: e.target.value === '' ? undefined : Number(e.target.value) })}
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-200 focus:border-primary rounded-xl outline-none font-medium text-sm transition-all text-slate-800"
                       />
                     </div>
