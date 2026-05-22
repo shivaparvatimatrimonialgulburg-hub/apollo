@@ -25,10 +25,13 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- =====================================================
 
 CREATE TABLE public.site_config (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id UUID PRIMARY KEY DEFAULT '00000000-0000-0000-0000-000000000001'::uuid,
   config_data JSONB NOT NULL,
-  created_by UUID REFERENCES auth.users(id) ON DELETE CASCADE,
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_by UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now(),
+  -- Senior Expert Design: Enforce that only a single row can ever exist in this table
+  is_singleton BOOLEAN DEFAULT TRUE UNIQUE CHECK (is_singleton = TRUE)
 );
 
 -- =====================================================
@@ -245,20 +248,20 @@ CREATE POLICY "site_config_insert"
 ON public.site_config
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "site_config_update"
 ON public.site_config
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "site_config_delete"
 ON public.site_config
 FOR DELETE
 TO authenticated
-USING (true);
+USING (auth.uid() IS NOT NULL);
 
 -- =====================================================
 -- DEPARTMENTS POLICIES
@@ -274,20 +277,20 @@ CREATE POLICY "departments_insert"
 ON public.departments
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "departments_update"
 ON public.departments
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "departments_delete"
 ON public.departments
 FOR DELETE
 TO authenticated
-USING (true);
+USING (auth.uid() IS NOT NULL);
 
 -- =====================================================
 -- OPD DOCTORS POLICIES
@@ -303,20 +306,20 @@ CREATE POLICY "opd_doctors_insert"
 ON public.opd_doctors
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "opd_doctors_update"
 ON public.opd_doctors
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "opd_doctors_delete"
 ON public.opd_doctors
 FOR DELETE
 TO authenticated
-USING (true);
+USING (auth.uid() IS NOT NULL);
 
 -- =====================================================
 -- HEALTH PACKAGES POLICIES
@@ -332,20 +335,20 @@ CREATE POLICY "health_packages_insert"
 ON public.health_packages
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "health_packages_update"
 ON public.health_packages
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "health_packages_delete"
 ON public.health_packages
 FOR DELETE
 TO authenticated
-USING (true);
+USING (auth.uid() IS NOT NULL);
 
 -- =====================================================
 -- APPOINTMENTS POLICIES
@@ -361,20 +364,20 @@ CREATE POLICY "appointments_insert"
 ON public.appointments
 FOR INSERT
 TO anon, authenticated
-WITH CHECK (true);
+WITH CHECK (patient_name IS NOT NULL AND patient_phone IS NOT NULL);
 
 CREATE POLICY "appointments_update"
 ON public.appointments
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "appointments_delete"
 ON public.appointments
 FOR DELETE
 TO authenticated
-USING (true);
+USING (auth.uid() IS NOT NULL);
 
 -- =====================================================
 -- TESTIMONIALS POLICIES
@@ -390,20 +393,20 @@ CREATE POLICY "testimonials_insert"
 ON public.testimonials
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "testimonials_update"
 ON public.testimonials
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "testimonials_delete"
 ON public.testimonials
 FOR DELETE
 TO authenticated
-USING (true);
+USING (auth.uid() IS NOT NULL);
 
 -- =====================================================
 -- CLINIC DOCUMENTS POLICIES
@@ -419,20 +422,20 @@ CREATE POLICY "clinic_documents_insert"
 ON public.clinic_documents
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "clinic_documents_update"
 ON public.clinic_documents
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "clinic_documents_delete"
 ON public.clinic_documents
 FOR DELETE
 TO authenticated
-USING (true);
+USING (auth.uid() IS NOT NULL);
 
 -- =====================================================
 -- MEDIA POLICIES
@@ -448,20 +451,20 @@ CREATE POLICY "media_insert"
 ON public.media
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "media_update"
 ON public.media
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "media_delete"
 ON public.media
 FOR DELETE
 TO authenticated
-USING (true);
+USING (auth.uid() IS NOT NULL);
 
 -- =====================================================
 -- MESSAGE LOGS POLICIES
@@ -477,20 +480,20 @@ CREATE POLICY "message_logs_insert"
 ON public.message_logs
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "message_logs_update"
 ON public.message_logs
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "message_logs_delete"
 ON public.message_logs
 FOR DELETE
 TO authenticated
-USING (true);
+USING (auth.uid() IS NOT NULL);
 
 -- =====================================================
 -- STAFF ACCOUNTS POLICIES
@@ -506,20 +509,20 @@ CREATE POLICY "staff_accounts_insert"
 ON public.staff_accounts
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "staff_accounts_update"
 ON public.staff_accounts
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "staff_accounts_delete"
 ON public.staff_accounts
 FOR DELETE
 TO authenticated
-USING (true);
+USING (auth.uid() IS NOT NULL);
 
 -- =====================================================
 -- TEMPLATES POLICIES
@@ -535,20 +538,20 @@ CREATE POLICY "templates_insert"
 ON public.templates
 FOR INSERT
 TO authenticated
-WITH CHECK (true);
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "templates_update"
 ON public.templates
 FOR UPDATE
 TO authenticated
-USING (true)
-WITH CHECK (true);
+USING (auth.uid() IS NOT NULL)
+WITH CHECK (auth.uid() IS NOT NULL);
 
 CREATE POLICY "templates_delete"
 ON public.templates
 FOR DELETE
 TO authenticated
-USING (true);
+USING (auth.uid() IS NOT NULL);
 
 -- =====================================================
 -- REALTIME
